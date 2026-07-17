@@ -3,7 +3,7 @@
 **Classification: PUBLIC**  
 **Visibility: Public**
 
-Safe, redistributable Grok skills and templates for Toolhead-Technology and the community.
+Safe, redistributable Grok skills and templates for the community.
 
 ## Boundary
 
@@ -16,7 +16,7 @@ Safe, redistributable Grok skills and templates for Toolhead-Technology and the 
 
 Internal and sensitive assets live only in the private sibling repository (org members):
 
-`Toolhead-Technology/agent-skills-private`
+`BrandonSRutledge/agent-skills-private`
 
 ## Layout
 
