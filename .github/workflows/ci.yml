@@ -1,0 +1,58 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  public-guardrails:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Only PUBLIC classifications allowed
+        run: |
+          set -euo pipefail
+          if grep -R --include='CLASSIFICATION.y*ml' -nE 'classification:[[:space:]]*(INTERNAL|SENSITIVE)' skills 2>/dev/null; then
+            echo "INTERNAL/SENSITIVE classifications are forbidden in the public repo"
+            exit 1
+          fi
+          echo "OK: no INTERNAL/SENSITIVE classifications"
+
+      - name: Every skill has CLASSIFICATION.yaml
+        run: |
+          set -euo pipefail
+          missing=0
+          for d in skills/public/*/; do
+            [ -d "$d" ] || continue
+            if [ ! -f "${d}CLASSIFICATION.yaml" ] && [ ! -f "${d}CLASSIFICATION.yml" ]; then
+              echo "Missing CLASSIFICATION.yaml in $d"
+              missing=1
+            fi
+            if [ ! -f "${d}SKILL.md" ]; then
+              echo "Missing SKILL.md in $d"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
+      - name: Block secret-like paths
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '(^|/)\.env$|\.pem$|id_rsa|credentials\.json|secrets\.ya?ml$' ; then
+            echo "Forbidden secret-like paths"
+            exit 1
+          fi
+
+      - name: Block sensitive path names
+        run: |
+          set -euo pipefail
+          if git ls-files | grep -E '(^|/)skills/sensitive(/|$)|(^|/)private(/|$)' ; then
+            echo "Forbidden sensitive path names in public repo"
+            exit 1
+          fi

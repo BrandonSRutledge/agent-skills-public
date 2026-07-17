@@ -1,0 +1,11 @@
+asset_id: skills/public/hello-public
+name: hello-public
+classification: PUBLIC
+owner: platform-team
+sensitive: false
+checkout_required: false
+tags:
+  - example
+  - public
+description: >
+  Minimal public example skill showing the required layout for the public catalog.
