@@ -1,5 +1,20 @@
 # agent-skills-public
 
+<!-- HOUSE_REPO_ROLE:START -->
+![repo role: skills-library](https://img.shields.io/static/v1?label=repo&message=skills-library&color=blueviolet)
+<!-- HOUSE_REPO_ROLE:END -->
+
+<!-- HOUSE_BADGE:START -->
+![house_scan](https://img.shields.io/static/v1?label=house_scan&message=pending&color=lightgrey)
+<!-- HOUSE_BADGE:END -->
+
+<!-- HOUSE_COMPLIANCE:START -->
+| Scanner (badge) | Waiver |
+|-----------------|--------|
+| _(run house_scan)_ | |
+<!-- HOUSE_COMPLIANCE:END -->
+
+
 **Classification: PUBLIC**  
 **Visibility: Public**
 
