@@ -12,6 +12,7 @@ permissions:
 jobs:
   public-guardrails:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
 
@@ -24,10 +25,11 @@ jobs:
           fi
           echo "OK: no INTERNAL/SENSITIVE classifications"
 
-      - name: Every skill has CLASSIFICATION.yaml
+      - name: Every skill has CLASSIFICATION.yaml + SKILL.md (non-empty)
         run: |
           set -euo pipefail
           missing=0
+          shopt -s nullglob
           for d in skills/public/*/; do
             [ -d "$d" ] || continue
             if [ ! -f "${d}CLASSIFICATION.yaml" ] && [ ! -f "${d}CLASSIFICATION.yml" ]; then
@@ -36,6 +38,15 @@ jobs:
             fi
             if [ ! -f "${d}SKILL.md" ]; then
               echo "Missing SKILL.md in $d"
+              missing=1
+            elif [ ! -s "${d}SKILL.md" ]; then
+              echo "Empty SKILL.md in $d"
+              missing=1
+            fi
+            # PUBLIC only in classification file
+            clf=$(ls "${d}"CLASSIFICATION.y*ml 2>/dev/null | head -1 || true)
+            if [ -n "$clf" ] && ! grep -qE 'classification:[[:space:]]*PUBLIC' "$clf"; then
+              echo "Expected classification: PUBLIC in $clf"
               missing=1
             fi
           done
@@ -56,3 +67,15 @@ jobs:
             echo "Forbidden sensitive path names in public repo"
             exit 1
           fi
+
+  gitleaks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

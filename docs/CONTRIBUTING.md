@@ -15,3 +15,13 @@
 - [ ] No secret-like files
 - [ ] Description is accurate and safe to share
 - [ ] CI passes
+
+## CI
+
+On every push/PR to `main`:
+
+- PUBLIC-only classification + non-empty `SKILL.md` per skill
+- Forbidden secret-like / sensitive paths
+- **Gitleaks** secret content scan
+
+Locally: ensure each skill under `skills/public/*/` has `CLASSIFICATION.yaml` (`classification: PUBLIC`) and a non-empty `SKILL.md`.
