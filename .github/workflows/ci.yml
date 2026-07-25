@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: read
+  pull-requests: read  # gitleaks-action on pull_request events
 
 jobs:
   public-guardrails:
