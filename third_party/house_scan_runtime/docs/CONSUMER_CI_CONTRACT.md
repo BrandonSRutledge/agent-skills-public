@@ -120,6 +120,11 @@ Default install is a no-op. If a binary pin is re-added, installers **must** use
 
 ```bash
 ./scripts/verify_consumer_pin.sh /path/to/consumer-or-bundle
+# All known consumers vs library export (library#12):
+./scripts/check_consumer_pins.sh
+# Refresh one consumer:
+#   ./scripts/export_runtime_bundle.sh
+#   rsync -a --delete bundle/house_scan_runtime/ ~/game/<consumer>/third_party/house_scan_runtime/
 ```
 
 ### Default suite scanners (Phase C)

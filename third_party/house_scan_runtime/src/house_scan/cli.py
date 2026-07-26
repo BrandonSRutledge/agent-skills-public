@@ -122,8 +122,12 @@ def cmd_scan(args: argparse.Namespace) -> int:
     print(f"report: {report_path}")
     print(f"table:  {repo / 'security' / 'COMPLIANCE.md'}")
 
-    if args.open_issues:
-        for msg in open_gap_issues(repo, results):
+    if args.open_issues or getattr(args, "open_issues_dry_run", False):
+        for msg in open_gap_issues(
+            repo,
+            results,
+            dry_run=bool(getattr(args, "open_issues_dry_run", False)),
+        ):
             print(msg)
 
     # Exit 0 only if no hard fail/error remain
@@ -149,6 +153,11 @@ def build_parser() -> argparse.ArgumentParser:
         "--open-issues",
         action="store_true",
         help="Open/dedupe GitHub issues for non-waived gaps",
+    )
+    s.add_argument(
+        "--open-issues-dry-run",
+        action="store_true",
+        help="Plan gap issues without creating/commenting (dogfood; library#13)",
     )
     s.add_argument(
         "--write-readme",

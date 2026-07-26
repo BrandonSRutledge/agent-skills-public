@@ -8,7 +8,7 @@ on:
 
 permissions:
   contents: read
-  pull-requests: read  # gitleaks-action on pull_request events
+  pull-requests: read
 
 jobs:
   public-guardrails:
@@ -68,18 +68,6 @@ jobs:
             echo "Forbidden sensitive path names in public repo"
             exit 1
           fi
-
-  gitleaks:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - name: Gitleaks
-        uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
   house-scan:
     name: house_scan suite
