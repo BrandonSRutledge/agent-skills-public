@@ -10,7 +10,7 @@ This document is the **normative** contract between `house-security-library` and
 
 ## 1. Goals
 
-1. Every consumer runs the **same** baseline suite (secret paths, gitleaks, waiver schema, workflow soft-fail).
+1. Every consumer runs the **same** baseline suite (secret paths, secrets content, waiver schema, workflow soft-fail).
 2. Consumers **pin** the suite version so CI does not silently drift.
 3. Private cross-repo checkout is optional; **vendored runtime** is a first-class pin strategy.
 
@@ -23,7 +23,7 @@ This document is the **normative** contract between `house-security-library` and
 | Target repo root | yes | Directory to scan (consumer checkout) |
 | `HOUSE_SECURITY_LIBRARY` | yes* | Path to library root **or** vendored bundle root with `scripts/house_scan.sh` |
 | Python | 3.11+ | 3.12 in Actions examples |
-| Network (install) | soft | `house_scan install` fetches pinned tools; may soft-continue if tools already present |
+| Network (install) | soft | Default pins have **no** binary tools (Phase C). Optional `--with-gitleaks` may need a PATH binary or re-added pin. |
 
 \*Local may resolve sibling `~/game/house-security-library` via `resolve_library` patterns in consumer `local_ci`.
 
@@ -110,15 +110,27 @@ jobs:
 
 Source of truth: `tools/pins.yaml` in the library (copied into the bundle).
 
-| Tool | Pin field |
-|------|-----------|
-| gitleaks | `tools.gitleaks.version` |
+| Tool | Pin field | Default suite |
+|------|-----------|---------------|
+| *(none)* | `tools: {}` | First-party scanners only (Phase C) |
+| gitleaks (optional) | `tools.gitleaks.version` | Only if re-added for `--with-gitleaks` dogfood |
 
-Installers **must** use pins (no `latest` in default path). Verify with:
+Default install is a no-op. If a binary pin is re-added, installers **must** use pinned versions (no `latest`). Verify with:
 
 ```bash
 ./scripts/verify_consumer_pin.sh /path/to/consumer-or-bundle
 ```
+
+### Default suite scanners (Phase C)
+
+| Scanner id | Kind |
+|------------|------|
+| `baseline.secret_paths` | first-party |
+| `baseline.secrets_content` | first-party |
+| `baseline.waiver_schema` | first-party |
+| `baseline.workflow_softfail` | first-party |
+
+`baseline.gitleaks` is **not** in the default suite (opt-in: `house_scan scan --with-gitleaks`).
 
 ---
 

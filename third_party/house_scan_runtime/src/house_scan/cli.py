@@ -85,8 +85,9 @@ def cmd_scan(args: argparse.Namespace) -> int:
     results: list[CheckResult] = []
     results.append(scan_secret_paths(repo))
     results.append(scan_secrets_content(repo))
-    # Dual-run: first-party critical content + third-party gitleaks (Phase B)
-    results.append(scan_gitleaks(repo, require_tool=not args.no_install))
+    # Phase C: gitleaks not in default suite; opt-in dual-run only
+    if getattr(args, "with_gitleaks", False):
+        results.append(scan_gitleaks(repo, require_tool=not args.no_install))
     results.append(scan_waiver_schema(repo))
     results.append(scan_workflow_softfail(repo))
 
@@ -157,7 +158,12 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument(
         "--no-install",
         action="store_true",
-        help="Do not auto-install gitleaks if missing",
+        help="With --with-gitleaks: do not auto-install if missing",
+    )
+    s.add_argument(
+        "--with-gitleaks",
+        action="store_true",
+        help="Opt-in dual-run third-party gitleaks (not in default suite; Phase C)",
     )
     s.add_argument(
         "--scaffold-waivers",

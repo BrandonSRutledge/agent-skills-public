@@ -176,7 +176,8 @@ def scan_secrets_content(repo: Path) -> CheckResult:
     """First-party critical secret *content* scanner (Phase B).
 
     Scans tracked text files for a small set of high-confidence secret shapes.
-    Complements path denylist; dual-runs with gitleaks until Phase C retire.
+    Complements path denylist. Default content gate after Phase C (gitleaks
+    retired from suite; optional --with-gitleaks dual-run only).
     No real secrets in fixtures — synthetic shapes that match patterns only.
     """
     sid = "baseline.secrets_content"
@@ -271,7 +272,7 @@ def scan_gitleaks(repo: Path, *, require_tool: bool = True) -> CheckResult:
     scanner in house-test-fixtures — prefer first-party secret scanners long
     term (see docs/DEPENDENCY_REDUCTION.md). Ephemeral known-bad probes remain
     in fixtures dogfood_probes. exclude_globs may still skip fixture fail paths
-    if present. Dual-runs with baseline.secrets_content (Phase B).
+    if present. Opt-in only via ``house_scan scan --with-gitleaks`` (Phase C).
     """
     sid = "baseline.gitleaks"
     try:
@@ -473,5 +474,7 @@ def scan_workflow_softfail(repo: Path) -> CheckResult:
 BASELINE_SCANNERS: list[Callable[[Path], CheckResult]] = [
     scan_secret_paths,
     scan_secrets_content,
-    # gitleaks wrapped separately for ensure install (Phase B dual-run)
+    scan_waiver_schema,
+    scan_workflow_softfail,
+    # gitleaks is opt-in only (--with-gitleaks); not in default suite (Phase C)
 ]

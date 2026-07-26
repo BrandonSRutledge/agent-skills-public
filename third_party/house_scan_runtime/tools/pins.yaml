@@ -1,13 +1,11 @@
 # Pinned scanner tools for house_scan install (no binaries in git).
 # Consumer CI contract: docs/CONSUMER_CI_CONTRACT.md
+#
+# Phase C (library#10): default suite is first-party only — no gitleaks pin.
+# Optional dual-run: `house_scan scan --with-gitleaks` uses PATH or optional
+# legacy pin under tools.gitleaks if re-added for dogfood.
 schema_version: "1.0.0"
 contract_version: "1.0.0"
 install_root_env: HOUSE_SECURITY_TOOLS_ROOT
 # Default: ~/.local/share/house-security-tools
-tools:
-  gitleaks:
-    version: "8.24.3"
-    github_repo: gitleaks/gitleaks
-    # Asset pattern uses {version} and {arch} where arch is x64|arm64
-    asset: "gitleaks_{version}_linux_{arch}.tar.gz"
-    binary: gitleaks
+tools: {}

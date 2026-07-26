@@ -26,9 +26,9 @@ def _load_pins() -> dict[str, Any]:
     try:
         import yaml  # type: ignore
 
-        return yaml.safe_load(text)
+        return yaml.safe_load(text) or {}
     except ImportError:
-        # Minimal parse for our pins file
+        # Minimal parse for optional tools.gitleaks block
         data: dict[str, Any] = {"tools": {}}
         current = None
         for line in text.splitlines():
@@ -77,18 +77,28 @@ def which_gitleaks() -> str | None:
 
 
 def install_tools(*, force: bool = False) -> int:
-    """Install pinned scanner tools. Returns 0 on success."""
+    """Install pinned scanner tools. Returns 0 on success.
+
+    Phase C: default pins have no binary tools (first-party suite only).
+    If tools.gitleaks is re-added to pins.yaml, install still works for opt-in dual-run.
+    """
     pins = _load_pins()
     tools = pins.get("tools") or {}
-    if "gitleaks" not in tools:
-        print("ERROR: pins.yaml missing gitleaks", flush=True)
-        return 1
+    if not tools:
+        print("OK: no third-party tools pinned (first-party suite only)")
+        return 0
 
-    gl = tools["gitleaks"]
+    if "gitleaks" in tools:
+        return _install_gitleaks(tools["gitleaks"], force=force)
+
+    print(f"OK: tools declared but no installer for keys={list(tools)}")
+    return 0
+
+
+def _install_gitleaks(gl: dict[str, Any], *, force: bool = False) -> int:
     version = gl["version"]
     existing = which_gitleaks()
     if existing and not force:
-        # Verify version soft
         try:
             out = subprocess.run(
                 [existing, "version"],
@@ -119,7 +129,6 @@ def install_tools(*, force: bool = False) -> int:
             tf.extractall(tmp)
         src = Path(tmp) / gl.get("binary", "gitleaks")
         if not src.is_file():
-            # search
             found = list(Path(tmp).rglob("gitleaks"))
             if not found:
                 print("ERROR: gitleaks binary not in archive", flush=True)
@@ -137,8 +146,7 @@ def install_tools(*, force: bool = False) -> int:
     }
     _write_manifest(man)
     print(f"OK: installed {target}")
-    # Ensure PATH hint
-    print(f"HINT: export PATH=\"{dest_bin}:$PATH\"")
+    print(f'HINT: export PATH="{dest_bin}:$PATH"')
     return 0
 
 
@@ -164,9 +172,18 @@ def uninstall_tools() -> int:
 
 
 def ensure_gitleaks() -> str:
+    """Ensure gitleaks for optional --with-gitleaks dual-run only."""
     path = which_gitleaks()
     if path:
         return path
+    pins = _load_pins()
+    tools = pins.get("tools") or {}
+    if "gitleaks" not in tools:
+        raise RuntimeError(
+            "gitleaks not on PATH and tools.gitleaks not pinned "
+            "(Phase C: default suite does not install gitleaks; "
+            "use PATH binary or re-add tools.gitleaks for --with-gitleaks)"
+        )
     code = install_tools()
     if code != 0:
         raise RuntimeError("failed to install gitleaks")
