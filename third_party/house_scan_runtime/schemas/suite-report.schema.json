@@ -1,0 +1,86 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://toolhead.technology/schemas/suite-report.schema.json",
+  "title": "HouseScanSuiteReport",
+  "description": "Full house_scan suite report for a target repository (no secrets).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "target_repo",
+    "started_utc",
+    "finished_utc",
+    "overall_compliance_pct",
+    "overall_status",
+    "results"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0.0"
+    },
+    "target_repo": {
+      "type": "string",
+      "description": "Path or owner/name of scanned repo"
+    },
+    "library_commit": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "started_utc": {
+      "type": "string"
+    },
+    "finished_utc": {
+      "type": "string"
+    },
+    "overall_compliance_pct": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100
+    },
+    "overall_status": {
+      "type": "string",
+      "enum": [
+        "passing",
+        "failing",
+        "waived"
+      ],
+      "description": "passing=all pass; waived=no non-waived fails; failing=has non-waived fail/error"
+    },
+    "waived_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "scanner_id",
+          "check_id",
+          "status",
+          "compliance_pct",
+          "timestamp_utc"
+        ],
+        "properties": {
+          "scanner_id": {
+            "type": "string"
+          },
+          "check_id": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "compliance_pct": {
+            "type": "integer"
+          },
+          "timestamp_utc": {
+            "type": "string"
+          }
+        }
+      }
+    }
+  }
+}

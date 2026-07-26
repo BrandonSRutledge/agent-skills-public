@@ -80,3 +80,22 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  house-scan:
+    name: house_scan suite
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Run house_scan (vendored contract pin)
+        run: |
+          set -euo pipefail
+          export HOUSE_SECURITY_LIBRARY="${GITHUB_WORKSPACE}/third_party/house_scan_runtime"
+          test -f "${HOUSE_SECURITY_LIBRARY}/CONTRACT_VERSION"
+          test -x "${HOUSE_SECURITY_LIBRARY}/scripts/house_scan.sh"
+          bash "${HOUSE_SECURITY_LIBRARY}/scripts/consumer_local_ci_fragment.sh" "${GITHUB_WORKSPACE}"

@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://toolhead.technology/schemas/control-check-result.schema.json",
+  "title": "ControlCheckResult",
+  "description": "Machine-readable result from a single house security scanner check (no secrets).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "scanner_id",
+    "check_id",
+    "status",
+    "compliance_pct",
+    "timestamp_utc"
+  ],
+  "properties": {
+    "scanner_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Stable scanner id; matches security/waivers/<scanner_id>.yaml stem."
+    },
+    "check_id": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Usually equals scanner_id for baseline 1:1 scanners."
+    },
+    "framework_id": {
+      "type": "string",
+      "description": "Optional framework id when check comes from a framework repo (cis-controls, etc.)."
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable scanner name for compliance table."
+    },
+    "status": {
+      "type": "string",
+      "enum": ["pass", "fail", "skip", "error", "waived"]
+    },
+    "compliance_pct": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Raw score before waiver (waived rows keep raw %; not forced to 100)."
+    },
+    "timestamp_utc": {
+      "type": "string",
+      "description": "ISO-8601 UTC timestamp."
+    },
+    "message": {
+      "type": ["string", "null"]
+    },
+    "findings_count": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "waiver_path": {
+      "type": ["string", "null"],
+      "description": "Relative path to per-scanner waiver if present."
+    },
+    "evidence_refs": {
+      "type": "array",
+      "items": { "type": "string" }
+    }
+  }
+}

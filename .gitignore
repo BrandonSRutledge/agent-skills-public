@@ -16,3 +16,4 @@ credentials.json
 secrets.yaml
 secrets.yml
 .pytest_cache/
+reports/
