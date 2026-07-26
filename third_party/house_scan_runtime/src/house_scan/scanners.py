@@ -20,6 +20,68 @@ SECRET_PATH_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Critical content shapes only (Phase B — docs/DEPENDENCY_REDUCTION.md).
+# Keep patterns strict so docs mentioning rule *names* do not false-positive.
+_SECRETS_CONTENT_RULES: list[tuple[str, re.Pattern[str]]] = [
+    (
+        "pem_private_key",
+        re.compile(
+            r"-----BEGIN (?:RSA |EC |OPENSSH |DSA |ENCRYPTED )?PRIVATE KEY-----"
+        ),
+    ),
+    (
+        "slack_token",
+        re.compile(
+            r"\bxox[baprs]-[0-9]{10,}-[0-9]{10,}-[A-Za-z0-9]{20,}\b"
+        ),
+    ),
+    (
+        "aws_access_key_id",
+        re.compile(r"\b(?:AKIA|ASIA)[0-9A-Z]{16}\b"),
+    ),
+    (
+        "github_pat",
+        re.compile(r"\bghp_[A-Za-z0-9]{36}\b"),
+    ),
+    (
+        "github_fine_grained_pat",
+        re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b"),
+    ),
+]
+
+# Skip likely-binary / non-text when sampling content
+_SECRETS_CONTENT_SKIP_SUFFIX = {
+    ".png",
+    ".jpg",
+    ".jpeg",
+    ".gif",
+    ".webp",
+    ".ico",
+    ".pdf",
+    ".zip",
+    ".gz",
+    ".tgz",
+    ".bz2",
+    ".xz",
+    ".7z",
+    ".woff",
+    ".woff2",
+    ".ttf",
+    ".eot",
+    ".mp3",
+    ".mp4",
+    ".wav",
+    ".ogg",
+    ".wasm",
+    ".dll",
+    ".so",
+    ".dylib",
+    ".exe",
+    ".bin",
+    ".pyc",
+    ".pyo",
+}
+
 
 @dataclass
 class CheckResult:
@@ -110,6 +172,98 @@ def scan_secret_paths(repo: Path) -> CheckResult:
         )
 
 
+def scan_secrets_content(repo: Path) -> CheckResult:
+    """First-party critical secret *content* scanner (Phase B).
+
+    Scans tracked text files for a small set of high-confidence secret shapes.
+    Complements path denylist; dual-runs with gitleaks until Phase C retire.
+    No real secrets in fixtures — synthetic shapes that match patterns only.
+    """
+    sid = "baseline.secrets_content"
+    try:
+        cfg = load_scan_config(repo)
+        out = subprocess.run(
+            ["git", "ls-files", "-z"],
+            cwd=str(repo),
+            capture_output=True,
+            check=False,
+            timeout=60,
+        )
+        if out.returncode != 0:
+            err = (out.stderr or b"").decode("utf-8", errors="replace").strip()
+            return CheckResult(
+                scanner_id=sid,
+                check_id=sid,
+                name="Critical secrets content",
+                status="error",
+                compliance_pct=0,
+                message=f"git ls-files failed: {err}",
+            )
+        tracked = [
+            p for p in out.stdout.decode("utf-8", errors="replace").split("\0") if p
+        ]
+        findings: list[str] = []
+        for rel in tracked:
+            if path_excluded(rel, cfg.exclude_globs):
+                continue
+            suffix = Path(rel).suffix.lower()
+            if suffix in _SECRETS_CONTENT_SKIP_SUFFIX:
+                continue
+            path = repo / rel
+            if not path.is_file():
+                continue
+            try:
+                # Cap read size to avoid huge blobs
+                raw = path.read_bytes()[:512_000]
+            except OSError as exc:
+                findings.append(f"{rel}: read error {exc}")
+                continue
+            if b"\0" in raw[:8192]:
+                continue  # binary
+            try:
+                text = raw.decode("utf-8")
+            except UnicodeDecodeError:
+                text = raw.decode("utf-8", errors="replace")
+            for rule_id, pattern in _SECRETS_CONTENT_RULES:
+                if pattern.search(text):
+                    findings.append(f"{rel}:{rule_id}")
+                    if len(findings) >= 50:
+                        break
+            if len(findings) >= 50:
+                break
+        if findings:
+            return CheckResult(
+                scanner_id=sid,
+                check_id=sid,
+                name="Critical secrets content",
+                status="fail",
+                compliance_pct=0,
+                message=f"{len(findings)} critical secret shape(s)",
+                findings_count=len(findings),
+                evidence_refs=findings[:20],
+            )
+        excluded_note = ""
+        if cfg.exclude_globs:
+            excluded_note = f" (exclude_globs={len(cfg.exclude_globs)})"
+        return CheckResult(
+            scanner_id=sid,
+            check_id=sid,
+            name="Critical secrets content",
+            status="pass",
+            compliance_pct=100,
+            message=f"No critical secret shapes{excluded_note}",
+        )
+    except Exception as exc:  # noqa: BLE001
+        return CheckResult(
+            scanner_id=sid,
+            check_id=sid,
+            name="Critical secrets content",
+            status="error",
+            compliance_pct=0,
+            message=str(exc),
+        )
+
+
 def scan_gitleaks(repo: Path, *, require_tool: bool = True) -> CheckResult:
     """Third-party gitleaks wrapper (dependency scanner).
 
@@ -117,7 +271,7 @@ def scan_gitleaks(repo: Path, *, require_tool: bool = True) -> CheckResult:
     scanner in house-test-fixtures — prefer first-party secret scanners long
     term (see docs/DEPENDENCY_REDUCTION.md). Ephemeral known-bad probes remain
     in fixtures dogfood_probes. exclude_globs may still skip fixture fail paths
-    if present.
+    if present. Dual-runs with baseline.secrets_content (Phase B).
     """
     sid = "baseline.gitleaks"
     try:
@@ -318,5 +472,6 @@ def scan_workflow_softfail(repo: Path) -> CheckResult:
 
 BASELINE_SCANNERS: list[Callable[[Path], CheckResult]] = [
     scan_secret_paths,
-    # gitleaks wrapped separately for ensure install
+    scan_secrets_content,
+    # gitleaks wrapped separately for ensure install (Phase B dual-run)
 ]

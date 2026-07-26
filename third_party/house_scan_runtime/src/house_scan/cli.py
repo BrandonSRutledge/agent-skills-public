@@ -23,6 +23,7 @@ from .scanners import (
     CheckResult,
     scan_gitleaks,
     scan_secret_paths,
+    scan_secrets_content,
     scan_waiver_schema,
     scan_workflow_softfail,
 )
@@ -83,6 +84,8 @@ def cmd_scan(args: argparse.Namespace) -> int:
     started = _utc()
     results: list[CheckResult] = []
     results.append(scan_secret_paths(repo))
+    results.append(scan_secrets_content(repo))
+    # Dual-run: first-party critical content + third-party gitleaks (Phase B)
     results.append(scan_gitleaks(repo, require_tool=not args.no_install))
     results.append(scan_waiver_schema(repo))
     results.append(scan_workflow_softfail(repo))
