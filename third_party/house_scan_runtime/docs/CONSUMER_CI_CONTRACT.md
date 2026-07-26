@@ -22,7 +22,8 @@ This document is the **normative** contract between `house-security-library` and
 |-------|----------|-------------|
 | Target repo root | yes | Directory to scan (consumer checkout) |
 | `HOUSE_SECURITY_LIBRARY` | yes* | Path to library root **or** vendored bundle root with `scripts/house_scan.sh` |
-| Python | 3.11+ | 3.12 in Actions examples |
+| Python | 3.11+ | 3.12 in Actions examples; **stdlib only** (no PyYAML/jsonschema required — Phase D) |
+| `git` | yes | Path/content scanners use `git ls-files` |
 | Network (install) | soft | Default pins have **no** binary tools (Phase C). Optional `--with-gitleaks` may need a PATH binary or re-added pin. |
 
 \*Local may resolve sibling `~/game/house-security-library` via `resolve_library` patterns in consumer `local_ci`.

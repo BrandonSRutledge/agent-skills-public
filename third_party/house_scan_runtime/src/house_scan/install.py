@@ -21,29 +21,33 @@ def _utc() -> str:
 
 
 def _load_pins() -> dict[str, Any]:
+    """Parse tools/pins.yaml without PyYAML (Phase D).
+
+    Supports empty tools:{} and optional tools.gitleaks block for opt-in dual-run.
+    """
     path = LIBRARY_ROOT / "tools" / "pins.yaml"
     text = path.read_text(encoding="utf-8")
-    try:
-        import yaml  # type: ignore
-
-        return yaml.safe_load(text) or {}
-    except ImportError:
-        # Minimal parse for optional tools.gitleaks block
-        data: dict[str, Any] = {"tools": {}}
+    data: dict[str, Any] = {"tools": {}}
+    current: str | None = None
+    for line in text.splitlines():
+        if line.strip().startswith("#") or not line.strip():
+            continue
+        if line.startswith("  gitleaks:"):
+            current = "gitleaks"
+            data["tools"][current] = {}
+            continue
+        if line.startswith("tools:"):
+            rest = line.split(":", 1)[1].strip()
+            if rest in ("{}", ""):
+                data["tools"] = {}
+            current = None
+            continue
+        if current and line.startswith("    ") and ":" in line:
+            key, _, val = line.strip().partition(":")
+            data["tools"][current][key.strip()] = val.strip().strip('"').strip("'")
+            continue
         current = None
-        for line in text.splitlines():
-            if line.startswith("  gitleaks:"):
-                current = "gitleaks"
-                data["tools"][current] = {}
-            elif current and line.startswith("    version:"):
-                data["tools"][current]["version"] = line.split(":", 1)[1].strip().strip('"')
-            elif current and line.startswith("    github_repo:"):
-                data["tools"][current]["github_repo"] = line.split(":", 1)[1].strip()
-            elif current and line.startswith("    asset:"):
-                data["tools"][current]["asset"] = line.split(":", 1)[1].strip().strip('"')
-            elif current and line.startswith("    binary:"):
-                data["tools"][current]["binary"] = line.split(":", 1)[1].strip()
-        return data
+    return data
 
 
 def _arch() -> str:

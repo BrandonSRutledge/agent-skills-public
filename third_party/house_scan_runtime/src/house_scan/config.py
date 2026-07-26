@@ -75,12 +75,8 @@ def load_scan_config(repo: Path) -> ScanConfig:
         return ScanConfig()
 
     text = path.read_text(encoding="utf-8")
-    try:
-        import yaml  # type: ignore
-
-        raw = yaml.safe_load(text)
-    except ImportError:
-        raw = _parse_simple_yaml(text)
+    # Phase D: stdlib-first (exclude_globs list subset only)
+    raw = _parse_simple_yaml(text)
 
     if not isinstance(raw, dict):
         return ScanConfig(path=path)

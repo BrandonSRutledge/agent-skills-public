@@ -68,12 +68,8 @@ def _parse_simple_yaml(text: str) -> dict[str, Any]:
 
 def load_waiver_file(path: Path) -> Waiver:
     text = path.read_text(encoding="utf-8")
-    try:
-        import yaml  # type: ignore
-
-        raw = yaml.safe_load(text)
-    except ImportError:
-        raw = _parse_simple_yaml(text)
+    # Phase D: stdlib-first. House waivers use a flat key: value subset.
+    raw = _parse_simple_yaml(text)
     if not isinstance(raw, dict):
         return Waiver(
             scanner_id=path.stem,
@@ -109,20 +105,8 @@ def load_waiver_file(path: Path) -> Waiver:
         expires = date(1970, 1, 1)
         errors.append(f"invalid expires_on {exp_s!r}")
 
-    # Optional jsonschema if available
-    try:
-        import json
-        import jsonschema  # type: ignore
-        from house_scan.paths import LIBRARY_ROOT
-
-        schema = json.loads(
-            (LIBRARY_ROOT / "schemas" / "waiver.schema.json").read_text(encoding="utf-8")
-        )
-        jsonschema.validate(raw, schema)
-    except ImportError:
-        pass
-    except Exception as exc:  # noqa: BLE001
-        errors.append(f"schema: {exc}")
+    # Pure-Python field checks above are the runtime contract (Phase D).
+    # Author-time schema dogfood: scripts/validate_schemas.py
 
     return Waiver(
         scanner_id=scanner_id or path.stem,
