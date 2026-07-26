@@ -47,6 +47,35 @@ _SECRETS_CONTENT_RULES: list[tuple[str, re.Pattern[str]]] = [
         "github_fine_grained_pat",
         re.compile(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b"),
     ),
+    (
+        "github_oauth_token",
+        re.compile(r"\bgho_[A-Za-z0-9]{36}\b"),
+    ),
+    (
+        "github_user_to_server",
+        re.compile(r"\bghu_[A-Za-z0-9]{36}\b"),
+    ),
+    (
+        "gitlab_pat",
+        re.compile(r"\bglpat-[A-Za-z0-9_-]{20,}\b"),
+    ),
+    (
+        "stripe_secret_key",
+        re.compile(r"\bsk_(?:live|test)_[A-Za-z0-9]{20,}\b"),
+    ),
+    (
+        "npm_access_token",
+        re.compile(r"\bnpm_[A-Za-z0-9]{36,}\b"),
+    ),
+    (
+        "openai_api_key",
+        # sk-proj-… / sk-… with long body (avoid matching short “sk-” prose)
+        re.compile(r"\bsk-(?:proj-)?[A-Za-z0-9]{32,}\b"),
+    ),
+    (
+        "anthropic_api_key",
+        re.compile(r"\bsk-ant-[A-Za-z0-9_-]{24,}\b"),
+    ),
 ]
 
 # Skip likely-binary / non-text when sampling content
