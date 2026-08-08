@@ -8,9 +8,10 @@
 | Scanner (badge) | Waiver |
 |-----------------|--------|
 | ![baseline.secret_paths 100%](https://img.shields.io/static/v1?label=secret_paths&message=100%25&color=brightgreen) | — |
-| ![baseline.gitleaks 100%](https://img.shields.io/static/v1?label=gitleaks&message=100%25&color=brightgreen) | — |
+| ![baseline.secrets_content 100%](https://img.shields.io/static/v1?label=secrets_content&message=100%25&color=brightgreen) | — |
 | ![baseline.waiver_schema 100%](https://img.shields.io/static/v1?label=waiver_schema&message=100%25&color=brightgreen) | — |
 | ![baseline.workflow_softfail 100%](https://img.shields.io/static/v1?label=workflow_softfail&message=100%25&color=brightgreen) | — |
+| ![baseline.workflow_path_filters 100%](https://img.shields.io/static/v1?label=workflow_path_filters&message=100%25&color=brightgreen) | — |
 | ![house_scan.overall 100%](https://img.shields.io/static/v1?label=Overall&message=100%25&color=brightgreen) | |
 <!-- HOUSE_COMPLIANCE:END -->
 
