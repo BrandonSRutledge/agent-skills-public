@@ -135,6 +135,7 @@ Default install is a no-op. If a binary pin is re-added, installers **must** use
 | `baseline.secrets_content` | first-party |
 | `baseline.waiver_schema` | first-party |
 | `baseline.workflow_softfail` | first-party |
+| `baseline.workflow_path_filters` | first-party |
 
 `baseline.gitleaks` is **not** in the default suite (opt-in: `house_scan scan --with-gitleaks`).
 

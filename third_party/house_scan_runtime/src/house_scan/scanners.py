@@ -448,8 +448,18 @@ def scan_waiver_schema(repo: Path) -> CheckResult:
     )
 
 
+_SECURITY_WF_MARKERS = re.compile(
+    r"gitleaks|secret|security-baseline|house[-_]?scan|security[-_]?scan",
+    re.I,
+)
+
+
 def scan_workflow_softfail(repo: Path) -> CheckResult:
-    """Heuristic: fail if continue-on-error appears near gitleaks/security job names."""
+    """Fail if continue-on-error:true appears in security-related workflow files.
+
+    Security-related: mentions gitleaks, secret, security-baseline, house-scan /
+    house_scan (house first-party suite), or security-scan.
+    """
     sid = "baseline.workflow_softfail"
     wf = repo / ".github" / "workflows"
     if not wf.is_dir():
@@ -462,23 +472,14 @@ def scan_workflow_softfail(repo: Path) -> CheckResult:
             message="no workflows",
         )
     findings: list[str] = []
-    for path in wf.rglob("*.yml"):
+    for path in list(wf.rglob("*.yml")) + list(wf.rglob("*.yaml")):
         text = path.read_text(encoding="utf-8", errors="replace")
         if "continue-on-error" not in text:
             continue
-        # crude: flag if file mentions gitleaks or security-baseline and continue-on-error
-        lower = text.lower()
-        if "gitleaks" in lower or "secret" in lower or "security-baseline" in lower:
-            if re.search(r"continue-on-error\s*:\s*true", text):
-                findings.append(str(path.relative_to(repo)))
-    for path in wf.rglob("*.yaml"):
-        text = path.read_text(encoding="utf-8", errors="replace")
-        if "continue-on-error" not in text:
+        if not _SECURITY_WF_MARKERS.search(text):
             continue
-        lower = text.lower()
-        if "gitleaks" in lower or "secret" in lower or "security-baseline" in lower:
-            if re.search(r"continue-on-error\s*:\s*true", text):
-                findings.append(str(path.relative_to(repo)))
+        if re.search(r"continue-on-error\s*:\s*true", text):
+            findings.append(str(path.relative_to(repo)))
     if findings:
         return CheckResult(
             scanner_id=sid,
@@ -500,10 +501,96 @@ def scan_workflow_softfail(repo: Path) -> CheckResult:
     )
 
 
+def _on_events_with_path_filters(on_block: object) -> list[str]:
+    """Return event names under workflow `on:` that set paths or paths-ignore."""
+    found: list[str] = []
+    if not isinstance(on_block, dict):
+        return found
+    for event, conf in on_block.items():
+        if event in ("workflow_call", "workflow_dispatch", "schedule", "release"):
+            continue
+        if not isinstance(conf, dict):
+            continue
+        if "paths" in conf or "paths-ignore" in conf:
+            found.append(str(event))
+    return found
+
+
+def scan_workflow_path_filters(repo: Path) -> CheckResult:
+    """Fail if security-related workflows use path filters on push/PR (ops#174 / #181).
+
+    Path filters on security jobs create blind spots: code can land on main without
+    house-scan when only non-matching paths change (SECURITY_DOGFOOD).
+    """
+    sid = "baseline.workflow_path_filters"
+    wf = repo / ".github" / "workflows"
+    if not wf.is_dir():
+        return CheckResult(
+            scanner_id=sid,
+            check_id=sid,
+            name="Workflow path-filter guard",
+            status="pass",
+            compliance_pct=100,
+            message="no workflows",
+        )
+    try:
+        import yaml  # type: ignore
+    except ImportError:
+        yaml = None  # type: ignore
+
+    findings: list[str] = []
+    for path in list(wf.rglob("*.yml")) + list(wf.rglob("*.yaml")):
+        text = path.read_text(encoding="utf-8", errors="replace")
+        if not _SECURITY_WF_MARKERS.search(text):
+            continue
+        rel = str(path.relative_to(repo))
+        events: list[str] = []
+        if yaml is not None:
+            try:
+                data = yaml.safe_load(text)
+            except Exception:
+                data = None
+            if isinstance(data, dict):
+                # PyYAML 1.1: unquoted key `on` loads as boolean True
+                on_block = data.get("on")
+                if on_block is None and True in data:
+                    on_block = data.get(True)
+                events = _on_events_with_path_filters(on_block)
+        if not events:
+            # Regex fallback: workflow-level paths under push/pull_request
+            if re.search(r"(?m)^\s+(paths|paths-ignore)\s*:", text) and re.search(
+                r"(?m)^(on:|\s+(push|pull_request):)", text
+            ):
+                events = ["path_filter"]
+        for ev in events:
+            findings.append(f"{rel}:on.{ev} has paths/paths-ignore (security workflow)")
+
+    if findings:
+        return CheckResult(
+            scanner_id=sid,
+            check_id=sid,
+            name="Workflow path-filter guard",
+            status="fail",
+            compliance_pct=0,
+            message="path filters on security-related workflows (blind spot risk)",
+            findings_count=len(findings),
+            evidence_refs=findings,
+        )
+    return CheckResult(
+        scanner_id=sid,
+        check_id=sid,
+        name="Workflow path-filter guard",
+        status="pass",
+        compliance_pct=100,
+        message="no path filters on security workflows",
+    )
+
+
 BASELINE_SCANNERS: list[Callable[[Path], CheckResult]] = [
     scan_secret_paths,
     scan_secrets_content,
     scan_waiver_schema,
     scan_workflow_softfail,
+    scan_workflow_path_filters,
     # gitleaks is opt-in only (--with-gitleaks); not in default suite (Phase C)
 ]
