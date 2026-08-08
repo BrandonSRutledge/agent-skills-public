@@ -13,6 +13,7 @@ SCANNER_BADGE_LABELS: dict[str, str] = {
     "baseline.gitleaks": "gitleaks",
     "baseline.waiver_schema": "waiver_schema",
     "baseline.workflow_softfail": "workflow_softfail",
+    "baseline.workflow_path_filters": "workflow_path_filters",
 }
 
 

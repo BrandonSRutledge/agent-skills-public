@@ -26,6 +26,7 @@ from .scanners import (
     scan_secrets_content,
     scan_waiver_schema,
     scan_workflow_softfail,
+    scan_workflow_path_filters,
 )
 from .waivers import active_waiver_for, load_waivers
 
@@ -90,6 +91,7 @@ def cmd_scan(args: argparse.Namespace) -> int:
         results.append(scan_gitleaks(repo, require_tool=not args.no_install))
     results.append(scan_waiver_schema(repo))
     results.append(scan_workflow_softfail(repo))
+    results.append(scan_workflow_path_filters(repo))
 
     results = _apply_waivers(results, repo)
     finished = _utc()
