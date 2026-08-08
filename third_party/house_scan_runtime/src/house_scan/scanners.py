@@ -448,8 +448,10 @@ def scan_waiver_schema(repo: Path) -> CheckResult:
     )
 
 
-_SECURITY_WF_MARKERS = re.compile(
-    r"gitleaks|secret|security-baseline|house[-_]?scan|security[-_]?scan",
+# Soft-fail: security tooling signals (avoid bare "secret" → matches secrets.*)
+_SECURITY_SOFTFAIL_MARKERS = re.compile(
+    r"gitleaks|security-baseline|house[-_]?scan|security[-_]?scan|"
+    r"secret[-_]?(paths|scan|content)|secret-like",
     re.I,
 )
 
@@ -457,8 +459,8 @@ _SECURITY_WF_MARKERS = re.compile(
 def scan_workflow_softfail(repo: Path) -> CheckResult:
     """Fail if continue-on-error:true appears in security-related workflow files.
 
-    Security-related: mentions gitleaks, secret, security-baseline, house-scan /
-    house_scan (house first-party suite), or security-scan.
+    Security-related: gitleaks, security-baseline, house-scan / house_scan,
+    security-scan, secret-paths / secret-scan (not mere ``secrets.*`` usage).
     """
     sid = "baseline.workflow_softfail"
     wf = repo / ".github" / "workflows"
@@ -476,7 +478,7 @@ def scan_workflow_softfail(repo: Path) -> CheckResult:
         text = path.read_text(encoding="utf-8", errors="replace")
         if "continue-on-error" not in text:
             continue
-        if not _SECURITY_WF_MARKERS.search(text):
+        if not _SECURITY_SOFTFAIL_MARKERS.search(text):
             continue
         if re.search(r"continue-on-error\s*:\s*true", text):
             findings.append(str(path.relative_to(repo)))
@@ -516,11 +518,43 @@ def _on_events_with_path_filters(on_block: object) -> list[str]:
     return found
 
 
+def _is_security_gate_workflow(path: Path, text: str) -> bool:
+    """True if workflow is a house security gate that must not path-filter.
+
+    Path-scoped product CI (Unity, Cloudflare) may mention secrets.* or comment
+    that house_scan lives elsewhere — those are not security gates. Detect by:
+    filename / workflow name, or steps that actually run security scanners.
+    """
+    n = path.name.lower()
+    if re.search(r"(security|gitleaks|house[-_]?scan|secret[-_]?scan)", n):
+        return True
+    m = re.search(r"(?m)^name:\s*[\"']?(.+?)[\"']?\s*$", text)
+    if m and re.search(
+        r"(security[-_]?baseline|house[-_]?scan|gitleaks|secret[-_]?scan)",
+        m.group(1),
+        re.I,
+    ):
+        return True
+    # Active steps (run/uses), not comments — house_scan.sh, gitleaks action, etc.
+    if re.search(
+        r"(?m)^\s+(-\s+)?(run:|uses:).{0,240}("
+        r"house_scan|gitleaks|secret[-_]?paths|security-baseline"
+        r")",
+        text,
+        re.I,
+    ):
+        return True
+    return False
+
+
 def scan_workflow_path_filters(repo: Path) -> CheckResult:
     """Fail if security-related workflows use path filters on push/PR (ops#174 / #181).
 
-    Path filters on security jobs create blind spots: code can land on main without
+    Path filters on security gates create blind spots: code can land on main without
     house-scan when only non-matching paths change (SECURITY_DOGFOOD).
+
+    Non-security path-scoped CI (e.g. Unity Assets/**, Cloudflare worker) is allowed
+    when a separate always-on security-baseline runs house_scan.
     """
     sid = "baseline.workflow_path_filters"
     wf = repo / ".github" / "workflows"
@@ -541,7 +575,7 @@ def scan_workflow_path_filters(repo: Path) -> CheckResult:
     findings: list[str] = []
     for path in list(wf.rglob("*.yml")) + list(wf.rglob("*.yaml")):
         text = path.read_text(encoding="utf-8", errors="replace")
-        if not _SECURITY_WF_MARKERS.search(text):
+        if not _is_security_gate_workflow(path, text):
             continue
         rel = str(path.relative_to(repo))
         events: list[str] = []
