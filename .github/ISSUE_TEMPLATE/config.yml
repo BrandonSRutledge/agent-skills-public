@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: File a leaf or TRACK on ops
+    url: https://github.com/BrandonSRutledge/ops-coordination/issues/new/choose
+    about: Prefer ops templates (leaf / TRACK / intake). Chief of Staff splits work. Do not implement from a dump here.
+  - name: Issue lifecycle (SSOT)
+    url: https://github.com/BrandonSRutledge/ops-coordination/blob/main/docs/ISSUE_LIFECYCLE.md
+    about: House ACs and close gates. Do not fork a third checklist here.
